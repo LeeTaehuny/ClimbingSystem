@@ -4,6 +4,7 @@
 #include "Components/CustomMovementComponent.h"
 
 #include "Kismet/KismetSystemLibrary.h"
+#include "GameFramework/Character.h"
 
 UCustomMovementComponent::UCustomMovementComponent()
 {
@@ -17,6 +18,7 @@ void UCustomMovementComponent::TickComponent(float DeltaTime, ELevelTick TickTyp
 
 	// 매 프레임마다 클라이밍 가능한 표면을 탐지합니다.
 	TraceClimbableSurfaces();
+	TraceFromEyeHeight(100.0f);
 }
 
 #pragma region ClimbTrace
@@ -44,6 +46,25 @@ TArray<FHitResult> UCustomMovementComponent::DoCapsuleTraceMultiByObject(const F
 	return OutCapsuleTraceHitResults;
 }
 
+FHitResult UCustomMovementComponent::DoLineTraceSingleByObject(const FVector& Start, const FVector& End, bool bShowDebugShape)
+{
+	FHitResult OutHit;
+
+	UKismetSystemLibrary::LineTraceSingleForObjects(
+		this,                                      // 월드 컨텍스트
+		Start,                                     // 시작 위치
+		End,                                       // 끝 위치
+		ClimbSurfaceTraceTypes,                    // 탐지할 오브젝트 타입
+		false,                                     // 복잡한 콜리전을 사용할지 여부
+		TArray<AActor*>(),                         // 무시할 액터 리스트
+		bShowDebugShape ? EDrawDebugTrace::ForOneFrame : EDrawDebugTrace::None, // 디버그 출력 여부
+		OutHit,                                    // 결과
+		false                                      // 자기 자신(이 트레이스를 실행한 액터)을 무시할지 여부
+	);
+
+	return OutHit;
+}
+
 #pragma endregion
 
 #pragma region ClimbCore
@@ -60,6 +81,17 @@ void UCustomMovementComponent::TraceClimbableSurfaces()
 
 	// 캡슐 트레이스를 실행하고 디버그 모양을 보여줍니다.
 	DoCapsuleTraceMultiByObject(Start, End, true);
+}
+
+void UCustomMovementComponent::TraceFromEyeHeight(float TraceDistance, float TraceStartOffset)
+{
+	const FVector ComponentLocation = UpdatedComponent->GetComponentLocation();
+	const FVector EyeHeightOffset = UpdatedComponent->GetUpVector() * (CharacterOwner->BaseEyeHeight + TraceStartOffset);
+	
+	const FVector Start = ComponentLocation + EyeHeightOffset;
+	const FVector End = Start + UpdatedComponent->GetForwardVector() * TraceDistance;
+
+	DoLineTraceSingleByObject(Start, End, true);
 }
 
 #pragma endregion
