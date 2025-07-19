@@ -78,9 +78,18 @@ void AClimbingSystemCharacter::BeginPlay()
 
 void AClimbingSystemCharacter::StartClimbing(const FInputActionValue& Value)
 {
-	checkf(ClimbComponent, TEXT("Not Valid ClimbComponent"));
+	if (!CustomMovementComponent) return;
 
-	ClimbComponent->ClimbStart();
+	if (!CustomMovementComponent->IsClimbing())
+	{
+		CustomMovementComponent->ToggleClimbing(true);
+	}
+	else
+	{
+		CustomMovementComponent->ToggleClimbing(false);
+	}
+
+	//ClimbComponent->ClimbStart();
 }
 
 //////////////////////////////////////////////////////////////////////////
